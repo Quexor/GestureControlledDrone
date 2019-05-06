@@ -6,15 +6,19 @@
 Controller control(A0, A1, A2);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   control.init();
   Serial.println("I'm alive");
 }
 
 void loop() {
-  Serial.print("Flex1 value 0 = ");
-  Serial.println (control.readFlex(A0)); // Printing Sensor value on Serial monitor
-  Serial.print("Flex1 value 1 = ");
-  Serial.println (control.readFlex(A1)); // Printing Sensor value on Serial monitor
-  delay(1000);
+  //value0
+  Serial.print(control.readFlex(A0)); // Printing Sensor value on Serial monitor
+  Serial.print(",");
+  //value1
+  Serial.print(control.readFlex(A1)); // Printing Sensor value on Serial monitor
+  Serial.print(",");
+  //value2
+  Serial.println (control.readFlex(A2)); // Printing Sensor value on Serial monitor
+  delay(100);
 }

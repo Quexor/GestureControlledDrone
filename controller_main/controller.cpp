@@ -12,7 +12,7 @@ void Controller::init() {
   pinMode(this->pin1, INPUT);
   pinMode(this->pin2, INPUT);
 
-  //Read sensor values & Get average sensor values
+  //Read flex sensor values & Get average sensor values
   uint16_t temp0 = 0; uint16_t temp1 = 0; uint16_t temp2 = 0;
   for(int i = 0; i < 15; i++) {
     temp0 += analogRead(this->pin0); 
