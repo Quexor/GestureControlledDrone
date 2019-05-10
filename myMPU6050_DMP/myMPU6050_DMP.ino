@@ -118,6 +118,10 @@ MPU6050 mpu;
 //#define OUTPUT_TEAPOT
 
 
+#ifndef _BV  //fix for _BV not declared error
+#define _BV(n) (1<<(n))
+#endif
+
 
 #define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
@@ -323,11 +327,11 @@ void loop() {
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            Serial.print("ypr\t");
+            //Serial.print("ypr\t");
             Serial.print(ypr[0] * 180/M_PI);
-            Serial.print("\t");
+            Serial.print(",");
             Serial.print(ypr[1] * 180/M_PI);
-            Serial.print("\t");
+            Serial.print(",");
             Serial.println(ypr[2] * 180/M_PI);
         #endif
 

@@ -36,21 +36,13 @@ THE SOFTWARE.
 
 #include "MPU6050.h"
 
-/** Default constructor, uses default I2C address.
- * @see MPU6050_DEFAULT_ADDRESS
- */
-MPU6050::MPU6050() {
-    devAddr = MPU6050_DEFAULT_ADDRESS;
-}
-
 /** Specific address constructor.
- * @param address I2C address
+ * @param address I2C address, uses default I2C address if none is specified
  * @see MPU6050_DEFAULT_ADDRESS
  * @see MPU6050_ADDRESS_AD0_LOW
  * @see MPU6050_ADDRESS_AD0_HIGH
  */
-MPU6050::MPU6050(uint8_t address) {
-    devAddr = address;
+MPU6050::MPU6050(uint8_t address):devAddr(address) {
 }
 
 /** Power on and prepare for general usage.
@@ -251,6 +243,64 @@ uint8_t MPU6050::getFullScaleGyroRange() {
  */
 void MPU6050::setFullScaleGyroRange(uint8_t range) {
     I2Cdev::writeBits(devAddr, MPU6050_RA_GYRO_CONFIG, MPU6050_GCONFIG_FS_SEL_BIT, MPU6050_GCONFIG_FS_SEL_LENGTH, range);
+}
+
+// SELF TEST FACTORY TRIM VALUES
+
+/** Get self-test factory trim value for accelerometer X axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_X
+ */
+uint8_t MPU6050::getAccelXSelfTestFactoryTrim() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_X, &buffer[0]);
+	I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_A, &buffer[1]);	
+    return (buffer[0]>>3) | ((buffer[1]>>4) & 0x03);
+}
+
+/** Get self-test factory trim value for accelerometer Y axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_Y
+ */
+uint8_t MPU6050::getAccelYSelfTestFactoryTrim() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_Y, &buffer[0]);
+	I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_A, &buffer[1]);	
+    return (buffer[0]>>3) | ((buffer[1]>>2) & 0x03);
+}
+
+/** Get self-test factory trim value for accelerometer Z axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_Z
+ */
+uint8_t MPU6050::getAccelZSelfTestFactoryTrim() {
+    I2Cdev::readBytes(devAddr, MPU6050_RA_SELF_TEST_Z, 2, buffer);	
+    return (buffer[0]>>3) | (buffer[1] & 0x03);
+}
+
+/** Get self-test factory trim value for gyro X axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_X
+ */
+uint8_t MPU6050::getGyroXSelfTestFactoryTrim() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_X, buffer);	
+    return (buffer[0] & 0x1F);
+}
+
+/** Get self-test factory trim value for gyro Y axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_Y
+ */
+uint8_t MPU6050::getGyroYSelfTestFactoryTrim() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_Y, buffer);	
+    return (buffer[0] & 0x1F);
+}
+
+/** Get self-test factory trim value for gyro Z axis.
+ * @return factory trim value
+ * @see MPU6050_RA_SELF_TEST_Z
+ */
+uint8_t MPU6050::getGyroZSelfTestFactoryTrim() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_SELF_TEST_Z, buffer);	
+    return (buffer[0] & 0x1F);
 }
 
 // ACCEL_CONFIG register
@@ -464,7 +514,7 @@ uint8_t MPU6050::getMotionDetectionThreshold() {
     I2Cdev::readByte(devAddr, MPU6050_RA_MOT_THR, buffer);
     return buffer[0];
 }
-/** Set free-fall event acceleration threshold.
+/** Set motion detection event acceleration threshold.
  * @param threshold New motion detection acceleration threshold value (LSB = 2mg)
  * @see getMotionDetectionThreshold()
  * @see MPU6050_RA_MOT_THR
@@ -862,7 +912,7 @@ void MPU6050::setMasterClockSpeed(uint8_t speed) {
  * operation, and if it is cleared, then it's a write operation. The remaining
  * bits (6-0) are the 7-bit device address of the slave device.
  *
- * In read mode, the result of the read is placed in the lowest available
+ * In read mode, the result of the read is placed in the lowest available 
  * EXT_SENS_DATA register. For further information regarding the allocation of
  * read results, please refer to the EXT_SENS_DATA register description
  * (Registers 73 - 96).
@@ -1990,6 +2040,14 @@ uint32_t MPU6050::getExternalSensorDWord(int position) {
 
 // MOT_DETECT_STATUS register
 
+/** Get full motion detection status register content (all bits).
+ * @return Motion detection status byte
+ * @see MPU6050_RA_MOT_DETECT_STATUS
+ */
+uint8_t MPU6050::getMotionStatus() {
+    I2Cdev::readByte(devAddr, MPU6050_RA_MOT_DETECT_STATUS, buffer);
+    return buffer[0];
+}
 /** Get X-axis negative motion detection interrupt status.
  * @return Motion detection status
  * @see MPU6050_RA_MOT_DETECT_STATUS
@@ -2494,7 +2552,7 @@ void MPU6050::setClockSource(uint8_t source) {
  * 1            | 2.5 Hz
  * 2            | 5 Hz
  * 3            | 10 Hz
- * <pre>
+ * </pre>
  *
  * For further information regarding the MPU-60X0's power modes, please refer to
  * Register 107.
@@ -2675,7 +2733,11 @@ uint8_t MPU6050::getFIFOByte() {
     return buffer[0];
 }
 void MPU6050::getFIFOBytes(uint8_t *data, uint8_t length) {
-    I2Cdev::readBytes(devAddr, MPU6050_RA_FIFO_R_W, length, data);
+    if(length > 0){
+        I2Cdev::readBytes(devAddr, MPU6050_RA_FIFO_R_W, length, data);
+    } else {
+    	*data = 0;
+    }
 }
 /** Write byte to FIFO buffer.
  * @see getFIFOByte()
@@ -2948,7 +3010,7 @@ void MPU6050::readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, ui
 
         // read the chunk of data as specified
         I2Cdev::readBytes(devAddr, MPU6050_RA_MEM_R_W, chunkSize, data + i);
-
+        
         // increase byte index by [chunkSize]
         i += chunkSize;
 
@@ -2967,12 +3029,12 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
     setMemoryBank(bank);
     setMemoryStartAddress(address);
     uint8_t chunkSize;
-    uint8_t *verifyBuffer;
-    uint8_t *progBuffer;
+    uint8_t *verifyBuffer=0;
+    uint8_t *progBuffer=0;
     uint16_t i;
     uint8_t j;
     if (verify) verifyBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
-    //if (useProgMem) progBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
+    if (useProgMem) progBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
     for (i = 0; i < dataSize;) {
         // determine correct chunk size according to bank position and data size
         chunkSize = MPU6050_DMP_MEMORY_CHUNK_SIZE;
@@ -2982,14 +3044,14 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
 
         // make sure this chunk doesn't go past the bank boundary (256 bytes)
         if (chunkSize > 256 - address) chunkSize = 256 - address;
-
-        // if (useProgMem) {
-        //     // write the chunk of data as specified
-        //     for (j = 0; j < chunkSize; j++) progBuffer[j] = pgm_read_byte(data + i + j);
-        // } else {
-        //     // write the chunk of data as specified
-        //     progBuffer = (uint8_t *)data + i;
-        // }
+        
+        if (useProgMem) {
+            // write the chunk of data as specified
+            for (j = 0; j < chunkSize; j++) progBuffer[j] = pgm_read_byte(data + i + j);
+        } else {
+            // write the chunk of data as specified
+            progBuffer = (uint8_t *)data + i;
+        }
 
         I2Cdev::writeBytes(devAddr, MPU6050_RA_MEM_R_W, chunkSize, progBuffer);
 
@@ -3017,7 +3079,7 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
                 }
                 Serial.print("\n");*/
                 free(verifyBuffer);
-                //if (useProgMem) free(progBuffer);
+                if (useProgMem) free(progBuffer);
                 return false; // uh oh.
             }
         }
@@ -3036,32 +3098,33 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
         }
     }
     if (verify) free(verifyBuffer);
-    //if (useProgMem) free(progBuffer);
+    if (useProgMem) free(progBuffer);
     return true;
 }
 bool MPU6050::writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify) {
     return writeMemoryBlock(data, dataSize, bank, address, verify, true);
 }
 bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem) {
-    uint8_t *progBuffer, success, special;
+    uint8_t *progBuffer = 0;
+	uint8_t success, special;
     uint16_t i, j;
-    // if (useProgMem) {
-    //     progBuffer = (uint8_t *)malloc(8); // assume 8-byte blocks, realloc later if necessary
-    // }
+    if (useProgMem) {
+        progBuffer = (uint8_t *)malloc(8); // assume 8-byte blocks, realloc later if necessary
+    }
 
     // config set data is a long string of blocks with the following structure:
     // [bank] [offset] [length] [byte[0], byte[1], ..., byte[length]]
     uint8_t bank, offset, length;
     for (i = 0; i < dataSize;) {
-        // if (useProgMem) {
-        //     bank = pgm_read_byte(data + i++);
-        //     offset = pgm_read_byte(data + i++);
-        //     length = pgm_read_byte(data + i++);
-        // } else {
-            // bank = data[i++];
-            // offset = data[i++];
-            // length = data[i++];
-        // }
+        if (useProgMem) {
+            bank = pgm_read_byte(data + i++);
+            offset = pgm_read_byte(data + i++);
+            length = pgm_read_byte(data + i++);
+        } else {
+            bank = data[i++];
+            offset = data[i++];
+            length = data[i++];
+        }
 
         // write data or perform special action
         if (length > 0) {
@@ -3071,13 +3134,13 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
             Serial.print(", offset ");
             Serial.print(offset);
             Serial.print(", length=");
-            // Serial.println(length);*/
-            // if (useProgMem) {
-            //     if (sizeof(progBuffer) < length) progBuffer = (uint8_t *)realloc(progBuffer, length);
-            //     for (j = 0; j < length; j++) progBuffer[j] = pgm_read_byte(data + i + j);
-            // } else {
-                // progBuffer = (uint8_t *)data + i;
-            // }
+            Serial.println(length);*/
+            if (useProgMem) {
+                if (sizeof(progBuffer) < length) progBuffer = (uint8_t *)realloc(progBuffer, length);
+                for (j = 0; j < length; j++) progBuffer[j] = pgm_read_byte(data + i + j);
+            } else {
+                progBuffer = (uint8_t *)data + i;
+            }
             success = writeMemoryBlock(progBuffer, length, bank, offset, true);
             i += length;
         } else {
@@ -3086,17 +3149,17 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
             // is totally undocumented. This code is in here based on observed
             // behavior only, and exactly why (or even whether) it has to be here
             // is anybody's guess for now.
-            // if (useProgMem) {
-            //     special = pgm_read_byte(data + i++);
-            // } else {
-                // special = data[i++];
-            // }
+            if (useProgMem) {
+                special = pgm_read_byte(data + i++);
+            } else {
+                special = data[i++];
+            }
             /*Serial.print("Special command code ");
             Serial.print(special, HEX);
             Serial.println(" found...");*/
             if (special == 0x01) {
                 // enable DMP-related interrupts
-
+                
                 //setIntZeroMotionEnabled(true);
                 //setIntFIFOBufferOverflowEnabled(true);
                 //setIntDMPEnabled(true);
@@ -3108,13 +3171,13 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
                 success = false;
             }
         }
-
+        
         if (!success) {
-            // if (useProgMem) free(progBuffer);
+            if (useProgMem) free(progBuffer);
             return false; // uh oh
         }
     }
-    // if (useProgMem) free(progBuffer);
+    if (useProgMem) free(progBuffer);
     return true;
 }
 bool MPU6050::writeProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize) {
