@@ -1,3 +1,0 @@
-This is a test document to ensure that everyone can access the git
-Hallo, this is Marian
-add by Justin
