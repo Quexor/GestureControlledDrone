@@ -18,6 +18,8 @@ RF24 radio(8,10);
 /**********************************************************/
 
 byte addresses[][6] = {"1Node","2Node"};
+byte add1[] = {0x34, 0xC3, 0x10, 0x10, 0x00};
+byte add2[] = {0x00, 0x10, 0x10, 0xC3, 0x34};
 
 // Used to control whether this node is sending or receiving
 bool role = 0;
@@ -32,16 +34,33 @@ void setup() {
 
   // Set the PA Level low to prevent power supply related issues since this is a
  // getting_started sketch, and the likelihood of close proximity of the devices. RF24_PA_MAX is default.
-  radio.setPALevel(RF24_PA_LOW);
+  radio.flush_tx();
+  radio.setPALevel(RF24_PA_MIN);
+  radio.setChannel(40);
+  radio.setCRCLength(RF24_CRC_16);
+  radio.setDataRate(RF24_2MBPS);
+  radio.setRetries(1,10);
+  radio.enableDynamicAck();
+  
   
   // Open a writing and reading pipe on each radio, with opposite addresses
-  if(radioNumber){
-    radio.openWritingPipe(addresses[1]);
-    radio.openReadingPipe(1,addresses[0]);
-  }else{
-    radio.openWritingPipe(addresses[0]);
-    radio.openReadingPipe(1,addresses[1]);
-  }
+//  if(radioNumber){
+//    radio.openWritingPipe(addresses[1]);
+//    radio.openReadingPipe(1,addresses[0]);
+//  }else{
+//    radio.openWritingPipe(addresses[0]);
+//    radio.openReadingPipe(1,addresses[1]);
+//  }
+    if(radioNumber){
+      radio.openWritingPipe(add1);
+      //radio.closeReadingPipe(1);
+      radio.openReadingPipe(0,add1);
+    }else{
+      radio.openWritingPipe(add1);
+      //radio.closeReadingPipe(1);
+      radio.openReadingPipe(0,add1);
+    }
+  
 
   radio.printDetails();
   // Start the radio listening for data
@@ -94,7 +113,7 @@ if (role == 1)  {
     }
 
     // Try again 1s later
-    delay(1000);
+    delay(500);
   }
 
 
