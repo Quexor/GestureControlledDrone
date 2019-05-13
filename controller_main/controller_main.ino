@@ -1,7 +1,13 @@
 #include "controller.h"
+#include "MPU6050_DMP.h"
+/*
 #define A0 54
 #define A1 55
 #define A2 56
+*/
+#define A0 14
+#define A1 15
+#define A2 16
 
 Controller control(A0, A1, A2);
 
@@ -13,12 +19,6 @@ void setup() {
 
 void loop() {
   //value0
-  Serial.print(control.readFlex(A0)); // Printing Sensor value on Serial monitor
-  Serial.print(",");
-  //value1
-  Serial.print(control.readFlex(A1)); // Printing Sensor value on Serial monitor
-  Serial.print(",");
-  //value2
-  Serial.println (control.readFlex(A2)); // Printing Sensor value on Serial monitor
+  Serial.println(control.readFlex()); // Printing Sensor value on Serial monitor
   delay(100);
 }

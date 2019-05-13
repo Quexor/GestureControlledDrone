@@ -28,3 +28,8 @@ void Controller::init() {
 int Controller::readFlex(uint16_t pin) {
   return analogRead(pin);
 }
+
+String Controller::readFlex() {
+  String comma_seperated = String(analogRead(this->pin0))+"," +String(analogRead(this->pin1))+","+String(analogRead(this->pin2));  
+  return comma_seperated;
+}
