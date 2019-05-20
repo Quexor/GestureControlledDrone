@@ -1,8 +1,17 @@
-#include <SPI.h>
-#include "RF24.h"
-#include <printf.h>
-#include "CommUAV.h"
+char cmd;
+// ================================================================
+// ===                      FLEX SENSORS                        ===
+// ================================================================
+#include "controller.h"
+#define A0 54 //#define A0 14
+#define A1 55 //#define A1 15
+#define A2 56 //#define A2 16
 
+Controller control(A0, A1, A2);
+
+// ================================================================
+// ===                      ACCELEROMETER                       ===
+// ================================================================
 //DMP
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -12,29 +21,14 @@
 
 #define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
 
-// Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins. CE is 8, CS is 10.
-RF24 radio(8,10);
 MPU6050 mpu;
 
-byte add1[] = {0x34, 0xC3, 0x10, 0x10, 0x01};
-
-uint8_t sendBuf[32];
-uint8_t sendCnt=0;
-uint8_t checksum=0;
-
-
-enum{THROTTLE,YAW,PITCH,ROLL}; 
-uint16_t rcData[4]={1500,1500,1500,1500}; 
-
-int Throttle = 1500;
-int Roll = 1499;
-int Pitch = 1499;
-int Yaw = 1500;
-
-char cmd;
+//enum{THROTTLE,YAW,PITCH,ROLL}; 
+//uint16_t rcData[4]={1500,1500,1500,1500}; 
 
 unsigned long counter = 0; //number that gets send
 
+// MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
@@ -44,17 +38,35 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
 Quaternion q;           // [w, x, y, z]         quaternion container
-VectorInt16 aa;         // [x, y, z]            accel sensor measurements
-VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
-float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
 void dmpDataReady() {
     mpuInterrupt = true;
 }
+
+// ================================================================
+// ===                      RF24                                ===
+// ================================================================
+#include <SPI.h>
+#include "RF24.h"
+#include <printf.h>
+#include "CommUAV.h"
+
+// Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins. CE is 8, CS is 10.
+RF24 radio(8,10);
+
+byte add1[] = {0x34, 0xC3, 0x10, 0x10, 0x01};
+uint8_t sendBuf[32];
+uint8_t sendCnt=0;
+uint8_t checksum=0;
+
+int Throttle = 1500;
+int Roll = 1499;
+int Pitch = 1499;
+int Yaw = 1500;
+
 
 void setup() {
   Serial.begin(115200);

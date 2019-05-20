@@ -6,6 +6,8 @@ class Controller {
     void init();
     int readFlex(uint16_t pin);
     String readFlex();
+    int readThrottle();
+    int readYaw();
     
   private:
     uint16_t initialA0;

@@ -33,3 +33,25 @@ String Controller::readFlex() {
   String comma_seperated = String(analogRead(this->pin0))+"," +String(analogRead(this->pin1))+","+String(analogRead(this->pin2));  
   return comma_seperated;
 }
+
+int Controller::readThrottle() {
+  int t = 1000;
+  int t_diff = (this->initialA0 - this->pin0);
+  if (t_diff > 5) {
+    t = map(t_diff, 0, 100, 1000, 2000);
+  }
+  return t;
+}
+
+int Controller::readYaw() {
+  int y = 1500;
+  int y_diff1 = (this->initialA1 - this->pin1);
+  int y_diff2 = (this->initialA2 - this->pin2);
+
+  // > 1500 turns left, < 1500 turns right
+  int y_diff = y_diff1 -  y_diff2;
+  if (abs(y_diff) > 5) {
+    y = map(y_diff, -100, 100, 1000, 2000);  
+  }
+  return y;
+}
