@@ -26,10 +26,10 @@ uint8_t checksum=0;
 enum{THROTTLE,YAW,PITCH,ROLL}; 
 uint16_t rcData[4]={1500,1500,1500,1500}; 
 
-int Throttle = 1001;
+int Throttle = 1500;
 int Roll = 1499;
 int Pitch = 1499;
-int Yaw = 1499;
+int Yaw = 1500;
 
 char cmd;
 
@@ -132,8 +132,8 @@ void DMPinit() {
 }
 
 void NRF24Send() {
-  Serial.print(F("Now sending "));
-  Serial.println(counter);
+  //Serial.print(F("Now sending "));
+  //Serial.println(counter);
 
   if (!radio.write( &counter, sizeof(unsigned long))){
     Serial.println(F("failed"));
@@ -237,6 +237,15 @@ void processDMP() {
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
   fifoCount = mpu.getFIFOCount();
+
+  // check for overflow (this should never happen unless our code is too inefficient)
+  if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
+      // reset so we can continue cleanly
+      mpu.resetFIFO();
+      fifoCount = mpu.getFIFOCount();
+      Serial.println(F("FIFO overflow!"));
+  }
+  
   // wait for correct available data length, should be a VERY short wait
   while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
   // read a packet from FIFO
@@ -250,11 +259,11 @@ void processDMP() {
   mpu.dmpGetQuaternion(&q, fifoBuffer);
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-//  Serial.print(ypr[0]/M_PI);
+//  Serial.print(ypr[0] * 180/M_PI);
 //  Serial.print(",");
-//  Serial.print(ypr[1]/M_PI);
+//  Serial.print(ypr[1] * 180/M_PI);
 //  Serial.print(",");
-//  Serial.println(ypr[2]/M_PI);
+//  Serial.println(ypr[2] * 180/M_PI);
 }
 
 void loop() {
@@ -277,8 +286,31 @@ void loop() {
   }
   if(cmd == 'T') {
     CommUAVUpload(MSP_SET_4CON);
+    Serial.print("Throttle: ");
+    Serial.print(Throttle);
+    Serial.print(", Yaw: ");
+    Serial.print(Yaw);
+    Serial.print(", Pitch: ");
+    Serial.print(Pitch);
+    Serial.print(", Roll: ");
+    Serial.println(Roll);
   }
   processDMP();
-  Pitch = map(ypr[1], -M_PI, M_PI, 1000, 2000);
-  Roll = map(ypr[2], -M_PI, M_PI, 1000, 2000);
+  Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000, 2000), 1000, 2000);
+  Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000, 2000), 1000, 2000);
+  delay(20);
+}
+
+long map(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+long limit(long x, long low_val, long max_val) {
+  if (x < low_val) {
+    return low_val;
+  } else if (x > max_val) {
+    return max_val;
+  } else {
+    return x;
+  }
 }
