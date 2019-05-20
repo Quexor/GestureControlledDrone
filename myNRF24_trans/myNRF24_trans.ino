@@ -31,6 +31,8 @@ int Roll = 1499;
 int Pitch = 1499;
 int Yaw = 1499;
 
+char cmd;
+
 unsigned long counter = 0; //number that gets send
 
 bool dmpReady = false;  // set true if DMP init was successful
@@ -248,28 +250,35 @@ void processDMP() {
   mpu.dmpGetQuaternion(&q, fifoBuffer);
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-  Serial.print(ypr[0] * 180/M_PI);
-  Serial.print(",");
-  Serial.print(ypr[1] * 180/M_PI);
-  Serial.print(",");
-  Serial.println(ypr[2] * 180/M_PI);
+//  Serial.print(ypr[0]/M_PI);
+//  Serial.print(",");
+//  Serial.print(ypr[1]/M_PI);
+//  Serial.print(",");
+//  Serial.println(ypr[2]/M_PI);
 }
 
 void loop() {
-  if ( Serial.available() )
+  if (Serial.available())
   {
-    char c = toupper(Serial.read());
-    if ( c == 'A') {
-      CommUAVUpload(MSP_ARM_IT);
-    }
-    if( c=='D') {
-      CommUAVUpload(MSP_DISARM_IT);
-    }
-    if(c == 'C') {
-      CommUAVUpload(MSP_ACC_CALI);
-    }
-    if(c == 'T') {
-      CommUAVUpload(MSP_SET_4CON);
+    int input = toupper(Serial.read());
+    if (input != 0 && input != 13 && input != 10) {
+      cmd = (char) input;
     }
   }
+  
+  if ( cmd == 'A') {
+    CommUAVUpload(MSP_ARM_IT);
+  }
+  if( cmd=='D') {
+    CommUAVUpload(MSP_DISARM_IT);
+  }
+  if(cmd == 'C') {
+    CommUAVUpload(MSP_ACC_CALI);
+  }
+  if(cmd == 'T') {
+    CommUAVUpload(MSP_SET_4CON);
+  }
+  processDMP();
+  Pitch = map(ypr[1], -M_PI, M_PI, 1000, 2000);
+  Roll = map(ypr[2], -M_PI, M_PI, 1000, 2000);
 }
