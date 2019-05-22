@@ -105,6 +105,7 @@ void DMPinit() {
 #include "RF24.h"
 #include <printf.h>
 #include "CommUAV.h"
+#include "DueTimer.h"
 
 // Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins. CE is 8, CS is 10.
 RF24 radio(8,10);
@@ -119,6 +120,12 @@ int Roll = 1499;
 int Pitch = 1499;
 int Yaw = 1500;
 
+bool shouldSend = false;
+
+void NRF24SendISR() {
+  shouldSend = true;
+}
+
 void NRF24init() {
   radio.begin();
   radio.setPALevel(RF24_PA_LOW); //set to max to test drone
@@ -132,6 +139,7 @@ void NRF24init() {
   radio.openWritingPipe(add1);
   radio.closeReadingPipe(1); //was opened by radio.begin();
   radio.printDetails();
+  Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();
 }
 
 void NRF24Send() {
@@ -283,43 +291,35 @@ void CommUAVUpload(uint8_t cmd)
 }
 
 void processDMP() {
-  if (mpuInterrupt && fifoCount < packetSize) {
-        // try to get out of the infinite loop 
-        fifoCount = mpu.getFIFOCount();
-  }
+  // if programming failed, don't try to do anything
+  if (!dmpReady) return;
+  if(!mpuInterrupt) return;
+  
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
-  fifoCount = mpu.getFIFOCount();
-
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
       // reset so we can continue cleanly
       mpu.resetFIFO();
       fifoCount = mpu.getFIFOCount();
       Serial.println(F("FIFO overflow!"));
-  }
+  } else if (mpuIntStatus & _BV(MPU6050_INTERRUPT_DMP_INT_BIT)) {
   
-  // wait for correct available data length, should be a VERY short wait
-  while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-  // read a packet from FIFO
-  mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-  // track FIFO count here in case there is > 1 packet available
-  // (this lets us immediately read more without waiting for an interrupt)
-  fifoCount -= packetSize;
-
-  //display YAW PITCH ROLL
-  mpu.dmpGetQuaternion(&q, fifoBuffer);
-  mpu.dmpGetGravity(&gravity, &q);
-  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-//  Serial.print(ypr[0] * 180/M_PI);
-//  Serial.print(",");
-//  Serial.print(ypr[1] * 180/M_PI);
-//  Serial.print(",");
-//  Serial.println(ypr[2] * 180/M_PI);
+    fifoCount = mpu.getFIFOCount();
+    
+    while (fifoCount >= packetSize) {
+      // read a packet from FIFO
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+      // track FIFO count here in case there is > 1 packet available
+      // (this lets us immediately read more without waiting for an interrupt)
+      fifoCount -= packetSize;
+      //display YAW PITCH ROLL
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    }
+  }
 }
-
-
 
 long map(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
