@@ -250,40 +250,34 @@ void CommUAVUpload(uint8_t cmd)
 }
 
 void processDMP() {
-  if (mpuInterrupt && fifoCount < packetSize) {
-        // try to get out of the infinite loop 
-        fifoCount = mpu.getFIFOCount();
-  }
+  // if programming failed, don't try to do anything
+  if (!dmpReady) return;
+  if(!mpuInterrupt) return;
+  
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
-  fifoCount = mpu.getFIFOCount();
-
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
       // reset so we can continue cleanly
       mpu.resetFIFO();
       fifoCount = mpu.getFIFOCount();
       Serial.println(F("FIFO overflow!"));
-  }
+  } else if (mpuIntStatus & _BV(MPU6050_INTERRUPT_DMP_INT_BIT)) {
   
-  // wait for correct available data length, should be a VERY short wait
-  while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-  // read a packet from FIFO
-  mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-  // track FIFO count here in case there is > 1 packet available
-  // (this lets us immediately read more without waiting for an interrupt)
-  fifoCount -= packetSize;
-
-  //display YAW PITCH ROLL
-  mpu.dmpGetQuaternion(&q, fifoBuffer);
-  mpu.dmpGetGravity(&gravity, &q);
-  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-//  Serial.print(ypr[0] * 180/M_PI);
-//  Serial.print(",");
-//  Serial.print(ypr[1] * 180/M_PI);
-//  Serial.print(",");
-//  Serial.println(ypr[2] * 180/M_PI);
+    fifoCount = mpu.getFIFOCount();
+    
+    while (fifoCount >= packetSize) {
+      // read a packet from FIFO
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+      // track FIFO count here in case there is > 1 packet available
+      // (this lets us immediately read more without waiting for an interrupt)
+      fifoCount -= packetSize;
+      //display YAW PITCH ROLL
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    }
+  }
 }
 
 void loop() {
