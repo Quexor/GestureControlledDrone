@@ -180,7 +180,6 @@ void setup() {
 }
 
 void loop() {
-  Serial.println(control.readFlex());
   if (Serial.available())
   {
     int input = toupper(Serial.read());
@@ -200,18 +199,20 @@ void loop() {
   }
   if(cmd == 'T') {
     CommUAVUpload(MSP_SET_4CON);
-    Serial.print("Throttle: ");
-    Serial.print(Throttle);
-    Serial.print(", Yaw: ");
-    Serial.print(Yaw);
-    Serial.print(", Pitch: ");
-    Serial.print(Pitch);
-    Serial.print(", Roll: ");
-    Serial.println(Roll);
   }
   processDMP();
-  Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000, 2000), 1000, 2000);
-  Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000, 2000), 1000, 2000);
+  Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+  Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+  Throttle = limit(map(control.readFlex(A0), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
+  Yaw = limit(map(control.readFlex(A1) - control.readFlex(A2), -500, 500, 1000, 2000), 1000, 2000); //TODO: Change map;
+  Serial.print("Throttle: ");
+  Serial.print(Throttle);
+  Serial.print(", Yaw: ");
+  Serial.print(Yaw);
+  Serial.print(", Pitch: ");
+  Serial.print(Pitch);
+  Serial.print(", Roll: ");
+  Serial.println(Roll);
   delay(20);
 }
 
@@ -322,6 +323,14 @@ void processDMP() {
 }
 
 long map(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+long map(int x, int in_min, int in_max, int out_min, int out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
