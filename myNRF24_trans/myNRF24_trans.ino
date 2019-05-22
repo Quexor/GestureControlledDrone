@@ -53,6 +53,7 @@ void dmpDataReady() {
 #include "RF24.h"
 #include <printf.h>
 #include "CommUAV.h"
+#include "DueTimer.h"
 
 // Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins. CE is 8, CS is 10.
 RF24 radio(8,10);
@@ -67,6 +68,8 @@ int Roll = 1499;
 int Pitch = 1499;
 int Yaw = 1500;
 
+bool shouldSend = false;
+
 
 void setup() {
   Serial.begin(115200);
@@ -74,6 +77,10 @@ void setup() {
   Serial.println("I'm alive");
   DMPinit();
   NRF24init();
+}
+
+void NRF24SendISR() {
+  shouldSend = true;
 }
 
 void NRF24init() {
@@ -89,6 +96,7 @@ void NRF24init() {
   radio.openWritingPipe(add1);
   radio.closeReadingPipe(1); //was opened by radio.begin();
   radio.printDetails();
+  Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();
 }
 
 void DMPinit() {
@@ -286,31 +294,33 @@ void loop() {
       cmd = (char) input;
     }
   }
+  if(shouldSend) {
+    if ( cmd == 'A') {
+      CommUAVUpload(MSP_ARM_IT);
+    }
+    if( cmd=='D') {
+      CommUAVUpload(MSP_DISARM_IT);
+    }
+    if(cmd == 'C') {
+      CommUAVUpload(MSP_ACC_CALI);
+    }
+    if(cmd == 'T') {
+      CommUAVUpload(MSP_SET_4CON);
+      Serial.print("Throttle: ");
+      Serial.print(Throttle);
+      Serial.print(", Yaw: ");
+      Serial.print(Yaw);
+      Serial.print(", Pitch: ");
+      Serial.print(Pitch);
+      Serial.print(", Roll: ");
+      Serial.println(Roll);
+    }
+    shouldSend = false;
+  }
   
-  if ( cmd == 'A') {
-    CommUAVUpload(MSP_ARM_IT);
-  }
-  if( cmd=='D') {
-    CommUAVUpload(MSP_DISARM_IT);
-  }
-  if(cmd == 'C') {
-    CommUAVUpload(MSP_ACC_CALI);
-  }
-  if(cmd == 'T') {
-    CommUAVUpload(MSP_SET_4CON);
-    Serial.print("Throttle: ");
-    Serial.print(Throttle);
-    Serial.print(", Yaw: ");
-    Serial.print(Yaw);
-    Serial.print(", Pitch: ");
-    Serial.print(Pitch);
-    Serial.print(", Roll: ");
-    Serial.println(Roll);
-  }
   processDMP();
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000, 2000), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000, 2000), 1000, 2000);
-  delay(20);
 }
 
 long map(float x, float in_min, float in_max, float out_min, float out_max) {
