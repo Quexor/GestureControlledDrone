@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "controller.h"
 
+
 Controller::Controller(uint16_t A0, uint16_t A1, uint16_t A2) {
   this->pin0 = A0;
   this->pin1 = A1;
@@ -36,22 +37,35 @@ String Controller::readFlex() {
 
 int Controller::readThrottle() {
   int t = 1000;
-  int t_diff = (this->initialA0 - this->pin0);
-  if (t_diff > 5) {
-    t = map(t_diff, 0, 100, 1000, 2000);
+  int t_diff;
+  for(int i = 0; i < 16; i++) {
+    t_diff += (this->initialA0 - analogRead(this->pin0));
+  }
+  t_diff = t_diff/16;
+  if (t_diff > 10) {
+//    Serial.print("This is t_diff: ");
+//    Serial.println(t_diff);
+    t = map(t_diff, 0, 200, 1000, 2000);
   }
   return t;
 }
 
 int Controller::readYaw() {
   int y = 1500;
-  int y_diff1 = (this->initialA1 - this->pin1);
-  int y_diff2 = (this->initialA2 - this->pin2);
-
+  int y_diff1 = 0;
+  int y_diff2 = 0;
+  for(int i = 0; i < 16; i++) {
+    y_diff1 += (this->initialA1 - analogRead(this->pin1));
+    y_diff2 += (this->initialA2 - analogRead(this->pin2));
+  }
+  y_diff1 = y_diff1/16;
+  y_diff2 = y_diff2/16;
   // > 1500 turns left, < 1500 turns right
   int y_diff = y_diff1 -  y_diff2;
-  if (abs(y_diff) > 5) {
-    y = map(y_diff, -100, 100, 1000, 2000);  
+  if (abs(y_diff) > 10) {
+//    Serial.print("This is y_diff: ");
+//    Serial.println(y_diff);
+    y = map(y_diff, -200, 200, 1000, 2000);  
   }
   return y;
 }

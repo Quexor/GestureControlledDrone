@@ -16,4 +16,9 @@ class Controller {
     uint16_t pin0;
     uint16_t pin1;
     uint16_t pin2;
+    //uint16_t A0vals[16];
+    //uint16_t A1vals[16];
+    //uint16_t A2vals[16];
+    //uint8_t A0index;
+    //uint8_
 };

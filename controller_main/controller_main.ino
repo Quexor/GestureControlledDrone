@@ -203,17 +203,19 @@ void loop() {
   processDMP();
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
-  Throttle = limit(map(control.readFlex(A0), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
-  Yaw = limit(map(control.readFlex(A1) - control.readFlex(A2), -500, 500, 1000, 2000), 1000, 2000); //TODO: Change map;
-  Serial.print("Throttle: ");
+  Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
+  Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
+  //Serial.print("Throttle: ");
   Serial.print(Throttle);
-  Serial.print(", Yaw: ");
+  Serial.print(",");
+  //Serial.print(", Yaw: ");
   Serial.print(Yaw);
-  Serial.print(", Pitch: ");
+  Serial.print(",");
+  //Serial.print(", Pitch: ");
   Serial.print(Pitch);
-  Serial.print(", Roll: ");
+  Serial.print(",");
+  //Serial.print(", Roll: ");
   Serial.println(Roll);
-  delay(20);
 }
 
 
