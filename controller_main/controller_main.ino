@@ -180,7 +180,6 @@ void setup() {
 }
 
 void loop() {
-  Serial.println(control.readFlex());
   if (Serial.available())
   {
     int input = toupper(Serial.read());
