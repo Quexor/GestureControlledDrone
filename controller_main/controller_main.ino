@@ -187,19 +187,23 @@ void loop() {
       cmd = (char) input;
     }
   }
+
+  if(shouldSend) {
+    if ( cmd == 'A') {
+      CommUAVUpload(MSP_ARM_IT);
+    }
+    if( cmd=='D') {
+      CommUAVUpload(MSP_DISARM_IT);
+    }
+    if(cmd == 'C') {
+      CommUAVUpload(MSP_ACC_CALI);
+    }
+    if(cmd == 'T') {
+      CommUAVUpload(MSP_SET_4CON);
+    }
+    shouldSend = false;
+  }
   
-  if ( cmd == 'A') {
-    CommUAVUpload(MSP_ARM_IT);
-  }
-  if( cmd=='D') {
-    CommUAVUpload(MSP_DISARM_IT);
-  }
-  if(cmd == 'C') {
-    CommUAVUpload(MSP_ACC_CALI);
-  }
-  if(cmd == 'T') {
-    CommUAVUpload(MSP_SET_4CON);
-  }
   processDMP();
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
