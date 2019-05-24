@@ -180,7 +180,6 @@ void setup() {
 }
 
 void loop() {
-  Serial.println(control.readFlex());
   if (Serial.available())
   {
     int input = toupper(Serial.read());
@@ -206,17 +205,17 @@ void loop() {
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
   Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
-//  //Serial.print("Throttle: ");
-//  Serial.print(Throttle);
-//  Serial.print(",");
-//  //Serial.print(", Yaw: ");
-//  Serial.print(Yaw);
-//  Serial.print(",");
-//  //Serial.print(", Pitch: ");
-//  Serial.print(Pitch);
-//  Serial.print(",");
-//  //Serial.print(", Roll: ");
-//  Serial.println(Roll);
+  //Serial.print("Throttle: ");
+  Serial.print(Throttle);
+  Serial.print(",");
+  //Serial.print(", Yaw: ");
+  Serial.print(Yaw);
+  Serial.print(",");
+  //Serial.print(", Pitch: ");
+  Serial.print(Pitch);
+  Serial.print(",");
+  //Serial.print(", Roll: ");
+  Serial.println(Roll);
 }
 
 

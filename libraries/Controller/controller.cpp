@@ -1,19 +1,9 @@
 #include <Arduino.h>
 #include "controller.h"
-#include "Filters.h"
-
-
-// filters out changes faster that 5 Hz.
-float filterFrequency = 5.0;
-
-// create a one pole (RC) lowpass filter
-FilterOnePole lowpassFilter0( LOWPASS, filterFrequency );
-FilterOnePole lowpassFilter1( LOWPASS, filterFrequency );
-FilterOnePole lowpassFilter2( LOWPASS, filterFrequency );
 
 Controller::Controller(uint16_t A0, uint16_t A1, uint16_t A2) {
-  this->pin0 = A0;
-  this->pin1 = A1;
+  this->pin0 = A1;
+  this->pin1 = A0;
   this->pin2 = A2;
 }
 
@@ -48,7 +38,7 @@ String Controller::readFlex() {
 int Controller::readThrottle() {
   int t = 1000;
   int t_diff;
-  t_diff = (this->initialA0 - lowpassFilter0.input(analogRead(this->pin0)));
+  t_diff = (this->initialA0 - analogRead(this->pin0));
   if (t_diff > 10) {
     t = map(t_diff, 0, 200, 1000, 2000);
   }
@@ -59,8 +49,8 @@ int Controller::readYaw() {
   int y = 1500;
   int y_diff1 = 0;
   int y_diff2 = 0;
-  y_diff1 = (this->initialA1 - (lowpassFilter1.input(analogRead(this->pin1))));
-  y_diff2 = (this->initialA2 - (lowpassFilter2.input(analogRead(this->pin2))));
+  y_diff1 = (this->initialA1 - analogRead(this->pin1));
+  y_diff2 = (this->initialA2 - analogRead(this->pin2));
   // > 1500 turns left, < 1500 turns right
   int y_diff = y_diff1 -  y_diff2;
   if (abs(y_diff) > 10) {
