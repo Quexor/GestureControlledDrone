@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "controller.h"
+/*
 #include "Filters.h"
 
 
@@ -10,10 +11,11 @@ float filterFrequency = 3.0;
 FilterOnePole lowpassFilter0( LOWPASS, filterFrequency );
 FilterOnePole lowpassFilter1( LOWPASS, filterFrequency );
 FilterOnePole lowpassFilter2( LOWPASS, filterFrequency );
+*/
 
 Controller::Controller(uint16_t A0, uint16_t A1, uint16_t A2) {
-  this->pin0 = A0;
-  this->pin1 = A1;
+  this->pin0 = A1;
+  this->pin1 = A0;
   this->pin2 = A2;
 }
 
@@ -89,8 +91,9 @@ int Controller::readThrottle() {
   int t = 1000;
   int t_diff;
   t_diff = (this->initialA0 - this->readFilteredFlex(this->pin0));
-  t = map((float) t_diff, 0.0, 200.0, 1000.0, 2000.0);
-  Serial.print(t);
+  if (t_diff > 5) {
+    t = map((float) t_diff, 0.0, 200.0, 1000.0, 2000.0);
+  } 
   return t;
 }
 
@@ -102,9 +105,8 @@ int Controller::readYaw() {
   y_diff2 = (this->initialA2 - this->readFilteredFlex(this->pin2));
 
   int y_diff = y_diff1 -  y_diff2;
-
-  Serial.print(",");
-  y = map((float) y_diff, -200.0, 200.0, 1000.0, 2000.0);
-  Serial.println(y);
+  if (abs(y_diff) > 10) {
+    y = map((float) y_diff, -200.0, 200.0, 1000.0, 2000.0);
+  }
   return y;
 }

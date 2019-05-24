@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "Filters.h"
 
-#define FILTER_WIN_SIZE 16
+#define FILTER_WIN_SIZE 64
 
 class Controller {
   public:
