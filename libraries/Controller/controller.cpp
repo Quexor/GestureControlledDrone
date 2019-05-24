@@ -49,9 +49,7 @@ int Controller::readThrottle() {
   int t = 1000;
   int t_diff;
   t_diff = (this->initialA0 - lowpassFilter0.input(analogRead(this->pin0)));
-//  Serial.print(t_diff);
   if (t_diff > 10) {
-//    Serial.print("This is t_diff: ");
     t = map(t_diff, 0, 200, 1000, 2000);
   }
   return t;
@@ -65,10 +63,7 @@ int Controller::readYaw() {
   y_diff2 = (this->initialA2 - (lowpassFilter2.input(analogRead(this->pin2))));
   // > 1500 turns left, < 1500 turns right
   int y_diff = y_diff1 -  y_diff2;
-//  Serial.print(",");
-//  Serial.println(y_diff);
   if (abs(y_diff) > 10) {
-//    Serial.print("This is y_diff: ");
     y = map(y_diff, -200, 200, 1000, 2000);  
   }
   return y;
