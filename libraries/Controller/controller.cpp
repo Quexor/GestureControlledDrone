@@ -92,7 +92,7 @@ int Controller::readThrottle() {
   int t_diff;
   t_diff = (this->initialA0 - this->readFilteredFlex(this->pin0));
   if (t_diff > 5) {
-    t = map((float) t_diff, 0.0, 200.0, 1000.0, 2000.0);
+    t = map((float) t_diff, 0.0, 100.0, 1000.0, 2000.0);
   } 
   return t;
 }

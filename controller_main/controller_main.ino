@@ -30,6 +30,11 @@ void key_setup()
   REG_PIOC_DIFSR |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
   REG_PIOC_SCDR = 1;
   REG_PIOC_IFER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+
+//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin4), 15)；
+//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin5), 15)；
+//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin6), 15)；
+//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin7), 15)；
      
   attachInterrupt(digitalPinToInterrupt(interruptPin4), button1_ISR, FALLING);
   attachInterrupt(digitalPinToInterrupt(interruptPin5), button2_ISR, FALLING);
@@ -196,7 +201,9 @@ void NRF24init() {
   radio.openWritingPipe(add1);
   radio.closeReadingPipe(1); //was opened by radio.begin();
   radio.printDetails();
+  NVIC_SetPriority(TC3_IRQn, 14); 
   Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();
+  
 }
 
 void NRF24Send() {
@@ -240,7 +247,7 @@ void setup() {
   DMPinit();
   delay(2000);
 
-  NVIC_SetPriority(TC3_IRQn, 14); //{TC1, 0, TC3_IRQn}
+  
 }
 
 void check_btn()
@@ -281,7 +288,29 @@ void check_btn()
 void loop() {
 
   //Serial.println("-");  
-  check_btn();
+  //check_btn();
+
+  if (Serial.available())
+  {
+    int input = toupper(Serial.read());
+    if (input != 0 && input != 13 && input != 10) {
+      cmd = (char) input;
+    }
+  }
+  
+  if ( cmd == 'A') {
+    CommUAVUpload(MSP_ARM_IT);
+  }
+  if( cmd=='D') {
+    CommUAVUpload(MSP_DISARM_IT);
+  }
+  if(cmd == 'C') {
+    CommUAVUpload(MSP_ACC_CALI);
+  }
+//  if(cmd == 'T') {
+//    CommUAVUpload(MSP_SET_4CON);
+//  }
+
       
   noInterrupts();
   processDMP();
@@ -447,24 +476,3 @@ long limit(long x, long low_val, long max_val) {
     return x;
   }
 }
-
-//  if (Serial.available())
-//  {
-//    int input = toupper(Serial.read());
-//    if (input != 0 && input != 13 && input != 10) {
-//      cmd = (char) input;
-//    }
-//  }
-//  
-//  if ( cmd == 'A') {
-//    CommUAVUpload(MSP_ARM_IT);
-//  }
-//  if( cmd=='D') {
-//    CommUAVUpload(MSP_DISARM_IT);
-//  }
-//  if(cmd == 'C') {
-//    CommUAVUpload(MSP_ACC_CALI);
-//  }
-//  if(cmd == 'T') {
-//    CommUAVUpload(MSP_SET_4CON);
-//  }
