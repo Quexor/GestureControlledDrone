@@ -210,6 +210,7 @@ void NRF24Send() {
 }
 
 void NRF24SendBuffer(uint8_t *buf) {
+  /*
   Serial.print(F("Now sending "));
   for(int i = 0; i < 32; i++)
   {
@@ -217,6 +218,7 @@ void NRF24SendBuffer(uint8_t *buf) {
     Serial.print('-');
   }
   Serial.println();
+  */
 
   if (!radio.write( buf, 32)) {
     Serial.println(F("failed"));
@@ -237,6 +239,8 @@ void setup() {
   control.init();
   DMPinit();
   delay(2000);
+
+  NVIC_SetPriority(TC3_IRQn, 14); //{TC1, 0, TC3_IRQn}
 }
 
 void check_btn()
@@ -272,27 +276,23 @@ void check_btn()
 //    Serial.println("btn4_pressed");
 //    btn4_flag = 0;
 //  }
-  
-
-  
 }
 
 void loop() {
 
-  Serial.println("-");  
+  //Serial.println("-");  
   check_btn();
-  
+      
   noInterrupts();
   processDMP();
   interrupts();
 
-  if(shouldSend == true)
-  {
+  if(shouldSend == true){
     CommUAVUpload(MSP_SET_4CON);
     shouldSend = false;
-    Serial.println("rf sent");
+    //Serial.println("rf sent");
   }
-  
+    
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
   if (1600 > Pitch && Pitch > 1400) {
@@ -304,16 +304,16 @@ void loop() {
   Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
   Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
   //Serial.print("Throttle: ");
-//  Serial.print(Throttle);
-//  Serial.print(",");
+  Serial.print(Throttle);
+  Serial.print(",");
 //  //Serial.print(", Yaw: ");
-//  Serial.print(Yaw);
-//  Serial.print(",");
+  Serial.print(Yaw);
+  Serial.print(",");
 //  //Serial.print(", Pitch: ");
-//  Serial.print(Pitch);
-//  Serial.print(",");
+  Serial.print(Pitch);
+  Serial.print(",");
 //  //Serial.print(", Roll: ");
-//  Serial.println(Roll);
+  Serial.println(Roll);
 }
 
 
@@ -337,7 +337,6 @@ static void uart16chk(int16_t a)
 void CommUAVUpload(uint8_t cmd)
 {
 //  uint8_t len;
-    noInterrupts();
     sendCnt=0;
     for(int i = 0; i++; i < 32) {
       sendBuf[i] = 0;
@@ -394,7 +393,6 @@ void CommUAVUpload(uint8_t cmd)
     uart8chk(checksum);
     
     NRF24SendBuffer(sendBuf);
-    interrupts();
 }
 
 void processDMP() {
