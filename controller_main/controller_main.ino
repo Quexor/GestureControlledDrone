@@ -1,5 +1,62 @@
 char cmd;
 // ================================================================
+// ===                      key                        ===
+// ================================================================
+#define interruptPin7 7 //c.23
+#define PIO_mask7 (1 << 23)
+
+#define interruptPin6 6 //c.24
+#define PIO_mask6 (1 << 24)
+
+#define interruptPin5 5 //c.25
+#define PIO_mask5 (1 << 25)
+
+#define interruptPin4 4 //c.26
+#define PIO_mask4 (1 << 26)
+
+char btn1_flag=0;
+char btn2_flag=0;
+char btn3_flag=0;
+char btn4_flag=0;
+
+// connect the key to digital pin 9,8,7,6
+void key_setup() 
+{
+
+  REG_PIOC_WPMR = 0x50494F00;
+  REG_PIOC_PER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_MDDR |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_PUER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_DIFSR |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_SCDR = 1;
+  REG_PIOC_IFER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+     
+  attachInterrupt(digitalPinToInterrupt(interruptPin4), button1_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin5), button2_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin6), button3_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin7), button4_ISR, FALLING);
+}
+
+
+void button1_ISR() {
+  btn1_flag=1;
+//  Serial.println("4 pres");
+}
+void button2_ISR() {
+  btn2_flag=1;
+//  Serial.println("5");
+}
+void button3_ISR() {
+  btn3_flag=1;
+//  Serial.println("6");
+}
+void button4_ISR() {
+  btn4_flag=1;
+//  Serial.println("7");
+}
+
+
+// ================================================================
 // ===                      FLEX SENSORS                        ===
 // ================================================================
 #include "controller.h"
@@ -174,35 +231,67 @@ void setup() {
   Serial.begin(115200);
   printf_begin();
   Serial.println("I'm alive");
-  DMPinit();
+  key_setup();
+  
   NRF24init();
   control.init();
+  DMPinit();
+  delay(2000);
+}
+
+void check_btn()
+{
+  if(btn1_flag==1)
+  {
+    CommUAVUpload(MSP_ARM_IT);
+    CommUAVUpload(MSP_ARM_IT);
+    
+//    Serial.println("btn1_pressed");
+    btn1_flag = 0;
+  }
+
+    if(btn2_flag==1)
+  {
+    CommUAVUpload(MSP_DISARM_IT);
+    CommUAVUpload(MSP_DISARM_IT);
+//    Serial.println("btn2_pressed");
+    btn2_flag = 0;
+  }
+
+    if(btn3_flag==1)
+  {
+    CommUAVUpload(MSP_ACC_CALI);
+    CommUAVUpload(MSP_ACC_CALI);
+//    Serial.println("btn3_pressed");
+    btn3_flag = 0;
+  }
+
+//    if(btn4_flag==1)
+//  {
+//    CommUAVUpload(MSP_SET_4CON);
+//    Serial.println("btn4_pressed");
+//    btn4_flag = 0;
+//  }
+  
+
+  
 }
 
 void loop() {
-  if (Serial.available())
-  {
-    int input = toupper(Serial.read());
-    if (input != 0 && input != 13 && input != 10) {
-      cmd = (char) input;
-    }
-  }
+
+  Serial.println("-");  
+  check_btn();
   
-  if ( cmd == 'A') {
-    CommUAVUpload(MSP_ARM_IT);
-  }
-  if( cmd=='D') {
-    CommUAVUpload(MSP_DISARM_IT);
-  }
-  if(cmd == 'C') {
-    CommUAVUpload(MSP_ACC_CALI);
-  }
-  if(cmd == 'T') {
-    CommUAVUpload(MSP_SET_4CON);
-  }
   noInterrupts();
   processDMP();
   interrupts();
+
+  if(shouldSend == true)
+  {
+    CommUAVUpload(MSP_SET_4CON);
+    shouldSend = false;
+    Serial.println("rf sent");
+  }
   
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
@@ -215,17 +304,21 @@ void loop() {
   Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
   Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
   //Serial.print("Throttle: ");
-  Serial.print(Throttle);
-  Serial.print(",");
-  //Serial.print(", Yaw: ");
-  Serial.print(Yaw);
-  Serial.print(",");
-  //Serial.print(", Pitch: ");
-  Serial.print(Pitch);
-  Serial.print(",");
-  //Serial.print(", Roll: ");
-  Serial.println(Roll);
+//  Serial.print(Throttle);
+//  Serial.print(",");
+//  //Serial.print(", Yaw: ");
+//  Serial.print(Yaw);
+//  Serial.print(",");
+//  //Serial.print(", Pitch: ");
+//  Serial.print(Pitch);
+//  Serial.print(",");
+//  //Serial.print(", Roll: ");
+//  Serial.println(Roll);
 }
+
+
+
+
 
 
 static  void uart8chk(uint8_t _x) 
@@ -244,7 +337,7 @@ static void uart16chk(int16_t a)
 void CommUAVUpload(uint8_t cmd)
 {
 //  uint8_t len;
-    
+    noInterrupts();
     sendCnt=0;
     for(int i = 0; i++; i < 32) {
       sendBuf[i] = 0;
@@ -299,7 +392,9 @@ void CommUAVUpload(uint8_t cmd)
         break;
     }
     uart8chk(checksum);
+    
     NRF24SendBuffer(sendBuf);
+    interrupts();
 }
 
 void processDMP() {
@@ -354,3 +449,24 @@ long limit(long x, long low_val, long max_val) {
     return x;
   }
 }
+
+//  if (Serial.available())
+//  {
+//    int input = toupper(Serial.read());
+//    if (input != 0 && input != 13 && input != 10) {
+//      cmd = (char) input;
+//    }
+//  }
+//  
+//  if ( cmd == 'A') {
+//    CommUAVUpload(MSP_ARM_IT);
+//  }
+//  if( cmd=='D') {
+//    CommUAVUpload(MSP_DISARM_IT);
+//  }
+//  if(cmd == 'C') {
+//    CommUAVUpload(MSP_ACC_CALI);
+//  }
+//  if(cmd == 'T') {
+//    CommUAVUpload(MSP_SET_4CON);
+//  }
