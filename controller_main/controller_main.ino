@@ -44,19 +44,20 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
 void dmpDataReady() {
     mpuInterrupt = true;
+    Serial.println("dma interrupt");
 }
 
 void DMPinit() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
-        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+        //Wire.setClock(200000); // 400kHz I2C clock. Comment this line if having compilation difficulties
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
         Fastwire::setup(400, true);
     #endif
 
     mpu.initialize();
-    pinMode(INTERRUPT_PIN, INPUT);
+//    pinMode(INTERRUPT_PIN, INPUT);
 
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
     
@@ -73,7 +74,7 @@ void DMPinit() {
         // turn on the DMP, now that it's ready
         Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
-
+        pinMode(INTERRUPT_PIN, INPUT);
         // enable Arduino interrupt detection
         Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
         Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
@@ -114,6 +115,8 @@ byte add1[] = {0x34, 0xC3, 0x10, 0x10, 0x01};
 uint8_t sendBuf[32];
 uint8_t sendCnt=0;
 uint8_t checksum=0;
+
+uint8_t state=0;
 
 int Throttle = 1500;
 int Roll = 1499;
@@ -166,6 +169,47 @@ void NRF24SendBuffer(uint8_t *buf) {
   }
 }
 
+void setup_timer7()
+{
+  // These are the clock frequencies available to the timers /2,/8,/32,/128
+// 84Mhz/2 = 42.000 MHz
+// 84Mhz/8 = 10.500 MHz
+// 84Mhz/32 = 2.625 MHz
+// 84Mhz/128 = 656.250 KHz
+//
+// 42Mhz/44.1Khz = 952.38
+// 10.5Mhz/44.1Khz = 238.09 
+// 2.625Hmz/44.1Khz = 59.5
+// 656Khz/44.1Khz = 14.88 // 131200 / 656000 = .2 (.2 seconds)
+
+// 84Mhz/44.1Khz = 1904 instructions per tick
+  /* turn on the timer clock in the power management controller */
+  pmc_set_writeprotect(false);     // disable write protection for pmc registers
+  pmc_enable_periph_clk(ID_TC7);   // enable peripheral clock TC7
+
+  /* we want wavesel 01 with RC */
+  TC_Configure(/* clock */TC2,/* channel */1, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4); 
+  TC_SetRC(TC2, 1, 656000);
+  TC_Start(TC2, 1);
+
+  // enable timer interrupts on the timer
+  TC2->TC_CHANNEL[1].TC_IER=TC_IER_CPCS;   // IER = interrupt enable register
+  TC2->TC_CHANNEL[1].TC_IDR=~TC_IER_CPCS;  // IDR = interrupt disable register
+
+  /* Enable the interrupt in the nested vector interrupt controller */
+  /* TC4_IRQn where 4 is the timer number * timer channels (3) + the channel number (=(1*3)+1) for timer1 channel1 */
+  NVIC_EnableIRQ(TC7_IRQn);
+}
+
+//void TC7_Handler()
+//{
+//  // We need to get the status to clear it and allow the interrupt to fire again
+//  TC_GetStatus(TC2, 1);
+//  state = !state;
+//  TC_SetRC(TC2, 1, 656000); // 656000/ 656000 = 1 second
+//  
+//}
+
 // ================================================================
 // ===                      SETUP                               ===
 // ================================================================
@@ -175,8 +219,10 @@ void setup() {
   printf_begin();
   Serial.println("I'm alive");
   DMPinit();
-  NRF24init();
-  control.init();
+  Serial.println("new");
+  //NRF24init();
+  //control.init();
+  //setup_timer7();
 }
 
 void loop() {
@@ -200,22 +246,26 @@ void loop() {
   if(cmd == 'T') {
     CommUAVUpload(MSP_SET_4CON);
   }
+  /*
   processDMP();
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+  if(Pitch<1600 || Pitch >1400) Pitch=1500;
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+  if(Roll<1600 || Roll >1400) Roll=1500;
   Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
   Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
   //Serial.print("Throttle: ");
-  Serial.print(Throttle);
-  Serial.print(",");
+  //Serial.print(Throttle);
+  //Serial.print(",");
   //Serial.print(", Yaw: ");
-  Serial.print(Yaw);
-  Serial.print(",");
+  //Serial.print(Yaw);
+  //Serial.print(",");
   //Serial.print(", Pitch: ");
   Serial.print(Pitch);
   Serial.print(",");
   //Serial.print(", Roll: ");
   Serial.println(Roll);
+  */
 }
 
 
