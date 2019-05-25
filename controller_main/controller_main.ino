@@ -187,26 +187,31 @@ void loop() {
       cmd = (char) input;
     }
   }
-
-  if(shouldSend) {
-    if ( cmd == 'A') {
-      CommUAVUpload(MSP_ARM_IT);
-    }
-    if( cmd=='D') {
-      CommUAVUpload(MSP_DISARM_IT);
-    }
-    if(cmd == 'C') {
-      CommUAVUpload(MSP_ACC_CALI);
-    }
-    if(cmd == 'T') {
-      CommUAVUpload(MSP_SET_4CON);
-    }
-    shouldSend = false;
-  }
   
+  if ( cmd == 'A') {
+    CommUAVUpload(MSP_ARM_IT);
+  }
+  if( cmd=='D') {
+    CommUAVUpload(MSP_DISARM_IT);
+  }
+  if(cmd == 'C') {
+    CommUAVUpload(MSP_ACC_CALI);
+  }
+  if(cmd == 'T') {
+    CommUAVUpload(MSP_SET_4CON);
+  }
+  noInterrupts();
   processDMP();
+  interrupts();
+  
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+  if (1600 > Pitch && Pitch > 1400) {
+    Pitch = 1500;
+  }
+  if (1600 > Roll && Roll > 1400) {
+    Roll = 1500;
+  }
   Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
   Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
   //Serial.print("Throttle: ");
@@ -301,9 +306,9 @@ void processDMP() {
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
   if(!mpuInterrupt) return;
-  
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
+
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
       // reset so we can continue cleanly
