@@ -31,10 +31,7 @@ void key_setup()
   REG_PIOC_SCDR = 1;
   REG_PIOC_IFER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
 
-//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin4), 15)；
-//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin5), 15)；
-//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin6), 15)；
-//  NVIC_SetPriority(digitalPinToInterrupt(interruptPin7), 15)；
+  NVIC_SetPriority(PIOC_IRQn,15);
      
   attachInterrupt(digitalPinToInterrupt(interruptPin4), button1_ISR, FALLING);
   attachInterrupt(digitalPinToInterrupt(interruptPin5), button2_ISR, FALLING);
@@ -202,8 +199,8 @@ void NRF24init() {
   radio.closeReadingPipe(1); //was opened by radio.begin();
   radio.printDetails();
   NVIC_SetPriority(TC3_IRQn, 14); 
-  Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();
-  
+//  Timer3.attachInterrupt(NRF24SendISR).setPeriod(2000000).start();
+  Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();  
 }
 
 void NRF24Send() {
@@ -257,7 +254,7 @@ void check_btn()
     CommUAVUpload(MSP_ARM_IT);
     CommUAVUpload(MSP_ARM_IT);
     
-//    Serial.println("btn1_pressed");
+    Serial.println("btn1_pressed");
     btn1_flag = 0;
   }
 
@@ -265,7 +262,7 @@ void check_btn()
   {
     CommUAVUpload(MSP_DISARM_IT);
     CommUAVUpload(MSP_DISARM_IT);
-//    Serial.println("btn2_pressed");
+    Serial.println("btn2_pressed");
     btn2_flag = 0;
   }
 
@@ -273,7 +270,7 @@ void check_btn()
   {
     CommUAVUpload(MSP_ACC_CALI);
     CommUAVUpload(MSP_ACC_CALI);
-//    Serial.println("btn3_pressed");
+    Serial.println("btn3_pressed");
     btn3_flag = 0;
   }
 
@@ -285,10 +282,14 @@ void check_btn()
 //  }
 }
 
+int i =0;
 void loop() {
 
+
+  i++;
+
   //Serial.println("-");  
-  //check_btn();
+  check_btn();
 
   if (Serial.available())
   {
@@ -321,31 +322,39 @@ void loop() {
     shouldSend = false;
     //Serial.println("rf sent");
   }
+
+
+  if(i>=5000)
+  {
+//    Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+//    Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    Pitch = limit(map(ypr[1], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    Roll = limit(map(ypr[2], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    if (1600 > Pitch && Pitch > 1400) {
+      Pitch = 1500;
+    }
+    if (1600 > Roll && Roll > 1400) {
+      Roll = 1500;
+    }
+    Throttle = limit(control.readThrottle(), 1000, 1800); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
+    Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
+    //Serial.print("Throttle: ");
+    Serial.print(Throttle);
+    Serial.print(",");
+  //  //Serial.print(", Yaw: ");
+    Serial.print(Yaw);
+    Serial.print(",");
+  //  //Serial.print(", Pitch: ");
+    Serial.print(Pitch);
+    Serial.print(",");
+  //  //Serial.print(", Roll: ");
+    Serial.println(Roll);
     
-  Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
-  Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
-  if (1600 > Pitch && Pitch > 1400) {
-    Pitch = 1500;
+    i=0;
   }
-  if (1600 > Roll && Roll > 1400) {
-    Roll = 1500;
-  }
-  Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
-  Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
-  //Serial.print("Throttle: ");
-  Serial.print(Throttle);
-  Serial.print(",");
-//  //Serial.print(", Yaw: ");
-  Serial.print(Yaw);
-  Serial.print(",");
-//  //Serial.print(", Pitch: ");
-  Serial.print(Pitch);
-  Serial.print(",");
-//  //Serial.print(", Roll: ");
-  Serial.println(Roll);
+    
+
 }
-
-
 
 
 
