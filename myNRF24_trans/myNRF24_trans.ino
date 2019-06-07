@@ -79,7 +79,7 @@ void setup() {
   NRF24init();
 }
 
-void NRF24SendISR() {
+void nrf24SendISR() {
   shouldSend = true;
 }
 
@@ -300,14 +300,6 @@ void loop() {
     }
     if(cmd == 'T') {
       CommUAVUpload(MSP_SET_4CON);
-      Serial.print("Throttle: ");
-      Serial.print(Throttle);
-      Serial.print(", Yaw: ");
-      Serial.print(Yaw);
-      Serial.print(", Pitch: ");
-      Serial.print(Pitch);
-      Serial.print(", Roll: ");
-      Serial.println(Roll);
     }
     shouldSend = false;
   }
@@ -315,6 +307,15 @@ void loop() {
   processDMP();
   Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000, 2000), 1000, 2000);
   Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000, 2000), 1000, 2000);
+
+  Serial.print("Throttle: ");
+  Serial.print(Throttle);
+  Serial.print(", Yaw: ");
+  Serial.print(Yaw);
+  Serial.print(", Pitch: ");
+  Serial.print(Pitch);
+  Serial.print(", Roll: ");
+  Serial.println(Roll);
 }
 
 long map(float x, float in_min, float in_max, float out_min, float out_max) {

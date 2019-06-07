@@ -1,5 +1,64 @@
 char cmd;
 // ================================================================
+// ===                      key                        ===
+// ================================================================
+#define interruptPin7 7 //c.23
+#define PIO_mask7 (1 << 23)
+
+#define interruptPin6 6 //c.24
+#define PIO_mask6 (1 << 24)
+
+#define interruptPin5 5 //c.25
+#define PIO_mask5 (1 << 25)
+
+#define interruptPin4 4 //c.26
+#define PIO_mask4 (1 << 26)
+
+char btn1_flag=0;
+char btn2_flag=0;
+char btn3_flag=0;
+char btn4_flag=0;
+
+// connect the key to digital pin 9,8,7,6
+void key_setup()
+{
+
+  REG_PIOC_WPMR = 0x50494F00;
+  REG_PIOC_PER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_MDDR |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_PUER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_DIFSR |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+  REG_PIOC_SCDR = 1;
+  REG_PIOC_IFER |= PIO_mask7|PIO_mask6|PIO_mask5|PIO_mask4;
+
+  NVIC_SetPriority(PIOC_IRQn,15);
+
+  attachInterrupt(digitalPinToInterrupt(interruptPin4), button1_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin5), button2_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin6), button3_ISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(interruptPin7), button4_ISR, FALLING);
+}
+
+
+void button1_ISR() {
+  btn1_flag=1;
+//  Serial.println("4 pres");
+}
+void button2_ISR() {
+  btn2_flag=1;
+//  Serial.println("5");
+}
+void button3_ISR() {
+  btn3_flag=1;
+//  Serial.println("6");
+}
+void button4_ISR() {
+  btn4_flag=1;
+//  Serial.println("7");
+}
+
+
+// ================================================================
 // ===                      FLEX SENSORS                        ===
 // ================================================================
 #include "controller.h"
@@ -23,8 +82,8 @@ Controller control(A0, A1, A2);
 
 MPU6050 mpu;
 
-//enum{THROTTLE,YAW,PITCH,ROLL}; 
-//uint16_t rcData[4]={1500,1500,1500,1500}; 
+//enum{THROTTLE,YAW,PITCH,ROLL};
+//uint16_t rcData[4]={1500,1500,1500,1500};
 
 unsigned long counter = 0; //number that gets send
 
@@ -60,7 +119,7 @@ void DMPinit() {
 //    pinMode(INTERRUPT_PIN, INPUT);
 
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-    
+
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -142,6 +201,8 @@ void NRF24init() {
   radio.openWritingPipe(add1);
   radio.closeReadingPipe(1); //was opened by radio.begin();
   radio.printDetails();
+  NVIC_SetPriority(TC3_IRQn, 14);
+//  Timer3.attachInterrupt(NRF24SendISR).setPeriod(2000000).start();
   Timer3.attachInterrupt(NRF24SendISR).setPeriod(20000).start();
 }
 
@@ -156,6 +217,7 @@ void NRF24Send() {
 }
 
 void NRF24SendBuffer(uint8_t *buf) {
+  /*
   Serial.print(F("Now sending "));
   for(int i = 0; i < 32; i++)
   {
@@ -163,6 +225,7 @@ void NRF24SendBuffer(uint8_t *buf) {
     Serial.print('-');
   }
   Serial.println();
+  */
 
   if (!radio.write( buf, 32)) {
     Serial.println(F("failed"));
@@ -178,7 +241,7 @@ void setup_timer7()
 // 84Mhz/128 = 656.250 KHz
 //
 // 42Mhz/44.1Khz = 952.38
-// 10.5Mhz/44.1Khz = 238.09 
+// 10.5Mhz/44.1Khz = 238.09
 // 2.625Hmz/44.1Khz = 59.5
 // 656Khz/44.1Khz = 14.88 // 131200 / 656000 = .2 (.2 seconds)
 
@@ -188,7 +251,7 @@ void setup_timer7()
   pmc_enable_periph_clk(ID_TC7);   // enable peripheral clock TC7
 
   /* we want wavesel 01 with RC */
-  TC_Configure(/* clock */TC2,/* channel */1, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4); 
+  TC_Configure(/* clock */TC2,/* channel */1, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4);
   TC_SetRC(TC2, 1, 656000);
   TC_Start(TC2, 1);
 
@@ -207,7 +270,7 @@ void setup_timer7()
 //  TC_GetStatus(TC2, 1);
 //  state = !state;
 //  TC_SetRC(TC2, 1, 656000); // 656000/ 656000 = 1 second
-//  
+//
 //}
 
 // ================================================================
@@ -218,14 +281,56 @@ void setup() {
   Serial.begin(115200);
   printf_begin();
   Serial.println("I'm alive");
+  key_setup();
+
+  NRF24init();
+  control.init();
   DMPinit();
-  Serial.println("new");
-  //NRF24init();
-  //control.init();
-  //setup_timer7();
+  delay(2000);
 }
 
+void check_btn()
+{
+  if(btn1_flag==1)
+  {
+    CommUAVUpload(MSP_ARM_IT);
+    CommUAVUpload(MSP_ARM_IT);
+
+    Serial.println("btn1_pressed");
+    btn1_flag = 0;
+  }
+
+    if(btn2_flag==1)
+  {
+    CommUAVUpload(MSP_DISARM_IT);
+    CommUAVUpload(MSP_DISARM_IT);
+    Serial.println("btn2_pressed");
+    btn2_flag = 0;
+  }
+
+    if(btn3_flag==1)
+  {
+    CommUAVUpload(MSP_ACC_CALI);
+    CommUAVUpload(MSP_ACC_CALI);
+    Serial.println("btn3_pressed");
+    btn3_flag = 0;
+  }
+
+//    if(btn4_flag==1)
+//  {
+//    CommUAVUpload(MSP_SET_4CON);
+//    Serial.println("btn4_pressed");
+//    btn4_flag = 0;
+//  }
+}
+
+int i =0;
 void loop() {
+  i++;
+
+  //Serial.println("-");
+  check_btn();
+
   if (Serial.available())
   {
     int input = toupper(Serial.read());
@@ -233,7 +338,7 @@ void loop() {
       cmd = (char) input;
     }
   }
-  
+
   if ( cmd == 'A') {
     CommUAVUpload(MSP_ARM_IT);
   }
@@ -243,59 +348,80 @@ void loop() {
   if(cmd == 'C') {
     CommUAVUpload(MSP_ACC_CALI);
   }
-  if(cmd == 'T') {
-    CommUAVUpload(MSP_SET_4CON);
-  }
-  /*
+//  if(cmd == 'T') {
+//    CommUAVUpload(MSP_SET_4CON);
+//  }
+
+
+  noInterrupts();
   processDMP();
-  Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
-  if(Pitch<1600 || Pitch >1400) Pitch=1500;
-  Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
-  if(Roll<1600 || Roll >1400) Roll=1500;
-  Throttle = limit(control.readThrottle(), 1000, 2000); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
-  Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
-  //Serial.print("Throttle: ");
-  //Serial.print(Throttle);
-  //Serial.print(",");
-  //Serial.print(", Yaw: ");
-  //Serial.print(Yaw);
-  //Serial.print(",");
-  //Serial.print(", Pitch: ");
-  Serial.print(Pitch);
-  Serial.print(",");
-  //Serial.print(", Roll: ");
-  Serial.println(Roll);
-  */
+  interrupts();
+
+  if(shouldSend == true){
+    CommUAVUpload(MSP_SET_4CON);
+    shouldSend = false;
+    //Serial.println("rf sent");
+  }
+
+  if(i>=5000)
+  {
+//    Pitch = limit(map(ypr[1], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+//    Roll = limit(map(ypr[2], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    Pitch = limit(map(ypr[1], -M_PI/4, M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    Roll = limit(map(ypr[2], M_PI/4, -M_PI/4, 1000.0, 2000.0), 1000, 2000);
+    if (1600 > Pitch && Pitch > 1400) {
+      Pitch = 1500;
+    }
+    if (1600 > Roll && Roll > 1400) {
+      Roll = 1500;
+    }
+    Throttle = limit(control.readThrottle(), 1000, 1800); //limit(map(control.readFlex(A1), 0, 700, 1000, 2000), 1000, 2000); //TODO: Change map;
+    Yaw = limit(control.readYaw(), 1000, 2000); //TODO: Change map;
+    //Serial.print("Throttle: ");
+    Serial.print(Throttle);
+    Serial.print(",");
+  //  //Serial.print(", Yaw: ");
+    Serial.print(Yaw);
+    Serial.print(",");
+  //  //Serial.print(", Pitch: ");
+    Serial.print(Pitch);
+    Serial.print(",");
+  //  //Serial.print(", Roll: ");
+    Serial.println(Roll);
+
+    i=0;
+  }
 }
 
 
-static  void uart8chk(uint8_t _x) 
+
+
+static  void uart8chk(uint8_t _x)
 {
-  sendBuf[sendCnt++]=_x;    
-  checksum ^= _x; 
+  sendBuf[sendCnt++]=_x;
+  checksum ^= _x;
 }
 
 static void uart16chk(int16_t a)
 {
     uart8chk((uint8_t)(a&0xff));
-    uart8chk((uint8_t)(a>>8));    
+    uart8chk((uint8_t)(a>>8));
 }
 
 
 void CommUAVUpload(uint8_t cmd)
 {
 //  uint8_t len;
-    
     sendCnt=0;
     for(int i = 0; i++; i < 32) {
       sendBuf[i] = 0;
     }
-    
+
     uart8chk('$');
     uart8chk('M');
     uart8chk('<');
-    checksum = 0;   
-    
+    checksum = 0;
+
     switch(cmd)
     {
       case MSP_SET_4CON:
@@ -328,18 +454,19 @@ void CommUAVUpload(uint8_t cmd)
         break;
       case MSP_STOP_HEAD_FREE:
         uart8chk(0);
-        uart8chk(cmd); 
+        uart8chk(cmd);
         break;
       case MSP_AUTO_LAND_DISARM:
         uart8chk(0);
-        uart8chk(cmd); 
+        uart8chk(cmd);
         break;
       case MSP_ACC_CALI:
         uart8chk(0);
-        uart8chk(cmd); 
+        uart8chk(cmd);
         break;
     }
     uart8chk(checksum);
+
     NRF24SendBuffer(sendBuf);
 }
 
@@ -347,9 +474,9 @@ void processDMP() {
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
   if(!mpuInterrupt) return;
-  
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
+
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
       // reset so we can continue cleanly
@@ -357,9 +484,9 @@ void processDMP() {
       fifoCount = mpu.getFIFOCount();
       Serial.println(F("FIFO overflow!"));
   } else if (mpuIntStatus & _BV(MPU6050_INTERRUPT_DMP_INT_BIT)) {
-  
+
     fifoCount = mpu.getFIFOCount();
-    
+
     while (fifoCount >= packetSize) {
       // read a packet from FIFO
       mpu.getFIFOBytes(fifoBuffer, packetSize);
