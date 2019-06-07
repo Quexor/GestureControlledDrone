@@ -14,3 +14,5 @@ Third Party Libraries used:
 - https://github.com/nRF24/RF24
 
 Use the Arduino IDE with the Arduino Due extension to upload and compile ```controller_main/controller_main.ino``` onto an Arduino Due.
+
+This project is licensed under 'GNU GENERAL PUBLIC LICENSE', as it incorporates the RF24 library which is under the same license.
