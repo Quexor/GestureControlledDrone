@@ -9,7 +9,6 @@ The peripherals that we attached to our Arduino Due are as follows:
 
 Third Party Libraries used:
 - https://github.com/ivanseidel/DueTimer
-- https://github.com/JonHub/Filters
 - https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050
 - https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/I2Cdev
 - https://github.com/nRF24/RF24
