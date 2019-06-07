@@ -1,4 +1,4 @@
-# Gesture_Controlled_Drone
+# Gesture Controlled Drone
 This is the repository for specifically the glove-controller part of our gesture controlled drone. 
 We used an Arduino Due for the microcontroller and attached all the sensors we used to it.
 
